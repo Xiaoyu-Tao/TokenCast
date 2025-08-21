@@ -1,9 +1,6 @@
 
 <div align="center">
   <h1><img src="assets/logo.jpeg" alt="TokenCast logo" style="height: 1em; width: auto; vertical-align: -0.15em; margin-right: 0.4em;">TokenCast: An LLM-Driven Framework for Context-Aware Time Series Forecasting via Symbolic Discretization</h1> 
-  <a href="https://arxiv.org/abs/2508.09191">
-    <img src="https://img.shields.io/badge/Paper-AAAI_2026-blue" alt="Paper">
-  </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   </a>
@@ -21,7 +18,7 @@
 TokenCast is a novel framework that leverages **Large Language Models (LLMs)** for **context-aware time series forecasting**, by transforming continuous time series into discrete symbolic tokens. It enables a unified generative modeling over both temporal and textual modalities.
 
 > 📝 “From Values to Tokens: An LLM-Driven Framework for Context-aware Time Series Forecasting via Symbolic Discretization”  
-> **AAAI 2026 under review** | [📄 Paper](https://arxiv.org/abs/2508.09191)
+> **Under review** | [📄 Paper](https://arxiv.org/abs/2508.09191)
 
 ---
 
