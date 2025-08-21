@@ -21,7 +21,7 @@
 TokenCast is a novel framework that leverages **Large Language Models (LLMs)** for **context-aware time series forecasting**, by transforming continuous time series into discrete symbolic tokens. It enables a unified generative modeling over both temporal and textual modalities.
 
 > 📝 “From Values to Tokens: An LLM-Driven Framework for Context-aware Time Series Forecasting via Symbolic Discretization”  
-> **AAAI 2026** | [📄 Paper](https://arxiv.org/abs/2508.09191)
+> **AAAI 2026 under review** | [📄 Paper](https://arxiv.org/abs/2508.09191)
 
 ---
 
