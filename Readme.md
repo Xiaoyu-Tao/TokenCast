@@ -87,7 +87,7 @@ TokenCast supports multiple publicly available datasets:
 - **Stock-NY & Stock-NA (NYSE/NASDAQ)**
 - **Nature (Environmental sensor data)**
 
-First, the training and evaluation datasets used in our experiments can be found in [Google Drive](https://drive.google.com/drive/u/0/home). Then, create a directory named `datasets` and then download the necessary datasets into it.
+First, the training and evaluation datasets used in our experiments can be found in [Google Drive](https://drive.google.com/file/d/1HOCE20FQgLl0xCv_dOmLcTbN1RCZWwqd/view?usp=drive_link). Then, create a directory named `datasets` and download the necessary datasets into it.
 
 ```bash
 mkdir datasets
