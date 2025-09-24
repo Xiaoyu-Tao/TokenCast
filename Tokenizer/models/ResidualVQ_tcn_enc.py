@@ -169,14 +169,6 @@ class Decoder(nn.Module):
         super().__init__()
         self.decoder = CasualTRM(dim=hidden_dim, d_ff=hidden_dim*4,
                                  n_heads=n_heads, n_layers=block_num, dropout=dropout)
-
-        # 将每个 token 特征维度通过 conv1d 从 1→通道
-        # self.conv1d = nn.Conv1d(in_channels=1, out_channels=enc_in, kernel_size=1)
-
-        # # 非线性映射
-        # self.activation = nn.ReLU()
-
-        # 映射到 patch_len
         self.linear = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim * 2),
             nn.GELU(),
@@ -189,7 +181,7 @@ class Decoder(nn.Module):
     def forward(self, x):
         """
         x: [B, T, D]  → D = hidden_dim
-        output: [B, patch_len * enc_in, 1] 或 reshape 后为 [B, pred_len, enc_in]
+        output: [B, patch_len * enc_in, 1] 
         """
         B, T, D = x.shape
         x, _ = self.decoder(x)  
@@ -197,7 +189,7 @@ class Decoder(nn.Module):
         x = x.view(B, T * self.patch_len, self.enc_in) # [B, pred_len, enc_in]
         # x = x.reshape(B * T, 1, D)           # [B*T, 1, D]
         # x = self.conv1d(x)                   # [B*T, enc_in, D]
-        # x = self.activation(x)               # 激活
+        # x = self.activation(x)              
        
         # x = self.linear(x)                   # [B*T, patch_len, enc_in]
         # x = x.transpose(1, 2)                # [B*T, D, enc_in]
@@ -251,9 +243,6 @@ class VQVAE(nn.Module):
             x = torch.cat([x_look_back, x_pred], dim=1)
         # x= x.permute(0,2,1)
         # x = torch
-
-
-        # print(f'input:{input.shape}')
         
         # x = x.unfold(1, self.patch_len, self.patch_len) # [bs x  patch_num x n_vars x patch_len]
         # x = x.permute(0, 1, 3, 2) # [bs x patch_num x patch_len x n_vars]
@@ -323,12 +312,12 @@ class VQVAE(nn.Module):
         B, N, Q = ids.shape
         ids_t = ids.permute(2, 0, 1).reshape(Q, -1)  # (Q, B*N)
         quant_ids = torch.arange(Q, device=ids.device).unsqueeze(1).expand(Q, B*N)
-        # 查找所有 embedding
+
         embeddings = self.quantize.codebooks[quant_ids, ids_t]  # (Q, B*N, D)
         embeddings = embeddings.permute(1, 0, 2).reshape(B, N, Q, -1)
         embedding = embeddings.sum(dim=-2)
 
-        # [bs x pred_num x embedding_size]
+
         quant = torch.cat([quant, embedding], dim=1)
         dec = self.dec(quant)
 
