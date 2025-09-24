@@ -57,8 +57,6 @@ class AttentionLayer(nn.Module):
         self.out_proj = nn.Linear(dim, dim)
         self.out_dropout = nn.Dropout(dropout)
         self.dropout = dropout
-
-        # 注册 RoPE 缓存
         self.register_buffer('cos_cache', None, persistent=False)
         self.register_buffer('sin_cache', None, persistent=False)
 
