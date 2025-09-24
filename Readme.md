@@ -1,4 +1,3 @@
-TokenCast
 <div align="center">
   <h1><img src="assets/logo.jpeg" alt="TokenCast logo" style="height: 1em; width: auto; vertical-align: -0.15em; margin-right: 0.4em;">TokenCast: An LLM-Driven Framework for Context-Aware Time Series Forecasting via Symbolic Discretization</h1> 
 </div>
