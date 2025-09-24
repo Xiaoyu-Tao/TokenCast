@@ -110,46 +110,45 @@ class Model(nn.Module):
         }
 
         self.text_tokenizer.add_special_tokens(special_tokens_dict)
-        # self.text_tokenizer.apply_chat_template
         
         self.n_embed = self.configs.elected_n_embed
-        # 初始化Qwen模型
+
         self.model = self._initialize_model(config)
-        # 初始化嵌入层
+
         self._initialize_embedding_layer()
 
         self._initialize_output_layer(config)
 
         if self.configs.layers:
-            num_layers = len(self.model.model.layers)  # 获取 Transformer 总层数
+            num_layers = len(self.model.model.layers)  
             print(f"Qwen2.5 共有 {num_layers} 层 Transformer")  
             for param in self.model.model.parameters():
                 param.requires_grad = False
-            n_unfreeze = self.configs.n_layers  # 只解冻最后 3 层
+            n_unfreeze = self.configs.n_layers  
             print(n_unfreeze)
 
             for i in range(num_layers - n_unfreeze, num_layers):
                 for param in self.model.model.layers[i].parameters():
-                    param.requires_grad = True # 解冻最后 3 层
+                    param.requires_grad = True 
             
-            # ✅ Step 3: 解冻 embedding 层
+
             for param in self.model.model.embed_tokens.parameters():
                 param.requires_grad = True
 
-            # ✅ Step 4: 解冻输出层（lm_head）
+
             for param in self.model.lm_head.parameters():
                 param.requires_grad = True
 
         if self.configs.frozen:
-            # 全部冻结
+
             for param in self.parameters():
                 param.requires_grad = False
 
-            # 解冻嵌入层
+
             for param in self.model.model.embed_tokens.parameters():
                 param.requires_grad = True
 
-            # 解冻输出层
+
             for param in self.model.lm_head.parameters():
                 param.requires_grad = True
 
@@ -161,8 +160,8 @@ class Model(nn.Module):
                 lora_alpha=32,
                 lora_dropout=0.1,
                 bias="none",
-                task_type=TaskType.CAUSAL_LM,  # 因为是语言模型
-                target_modules=["q_proj", "v_proj"]  # 根据你实际使用的模型修改模块名（可print确认）
+                task_type=TaskType.CAUSAL_LM,  
+                target_modules=["q_proj", "v_proj"] 
             )
             self.model = get_peft_model(self.model, lora_config)
             
@@ -182,7 +181,6 @@ class Model(nn.Module):
         original_weight = self.model.model.embed_tokens.weight
         self.original_len = len(original_weight)
 
-        # 🔸 获取 special token 数量
         special_tokens_len = len(self.text_tokenizer.additional_special_tokens)
 
         if use_normal_dist:
@@ -201,11 +199,10 @@ class Model(nn.Module):
             special_indices = random.sample(range(len(original_weight)), special_tokens_len)
             special_tokens_weight = original_weight[special_indices]
 
-        # 🔸 扩展词表
+
         total_vocab_size = self.original_len + self.n_embed + special_tokens_len
         self.model.resize_token_embeddings(total_vocab_size)
 
-        # 🔸 赋值新嵌入
         start_idx = self.original_len
         end_idx = start_idx + self.n_embed
         self.model.model.embed_tokens.weight.data[start_idx:end_idx] = ts_weight
@@ -214,17 +211,17 @@ class Model(nn.Module):
         end_idx = start_idx + special_tokens_len
         self.model.model.embed_tokens.weight.data[start_idx:end_idx] = special_tokens_weight
 
-        # 🔸 保存 embedding 权重以供输出层使用
+        
         self.embedding_weight = self.model.model.embed_tokens.weight
 
 
     def _initialize_output_layer(self, config):
-        # 创建输出层，与embedding layer共享权重
+        
         output_layer = nn.Linear(config.hidden_size, self.embedding_weight.size(0), bias=False)
-        # 使用embedding layer的权重初始化输出层
+        
         output_layer.weight.data = self.embedding_weight.data
         
-        # 替换Qwen模型的输出层
+        
         self.model.set_output_embeddings(output_layer)
         self.model.lm_head.weight = self.model.model.embed_tokens.weight
         
@@ -232,7 +229,7 @@ class Model(nn.Module):
         text_ids, input_ids, labels = inputs['text_ids'], inputs['ts_ids'], inputs['labels']
         device = input_ids.device
 
-        # 构造 attention mask
+        
         attention_mask = torch.ones(input_ids.shape[0], input_ids.shape[1], dtype=torch.float32, device=device)
 
         
@@ -243,7 +240,7 @@ class Model(nn.Module):
         ts_end_id = self.text_tokenizer.convert_tokens_to_ids("<TS_END>")
 
         
-        # 🚀 正确地传 input_ids，别用 inputs_embeds！
+        
         outputs = self.model(
             input_ids=input_ids,
             labels=labels,
@@ -263,7 +260,7 @@ class Model(nn.Module):
 
         tokenizer = self.text_tokenizer
         device = next(self.model.parameters()).device
-        original_len = self.original_len  # 原始词表长度
+        original_len = self.original_len  
         n_ts_token = self.n_embed
         ts_token_range = (original_len, original_len + n_ts_token)
 
@@ -279,11 +276,11 @@ class Model(nn.Module):
 
         logits_processor = LogitsProcessorList([
             TsTokenFormatController(
-                ts_token_range=ts_token_range,     # 假设时序token id是这个范围
-                ts_start_token_id=ts_start_token_id,          # <TS_START>
-                ts_end_token_id=ts_end_token_id ,            # <TS_END>
-                ts_start_pos=text_token_len+input_ids.shape[1],                  # 文本 token 为前 32 个
-                ts_len=ts_token_len                     # 时序 token 输出长度
+                ts_token_range=ts_token_range,     
+                ts_start_token_id=ts_start_token_id,          
+                ts_end_token_id=ts_end_token_id ,            
+                ts_start_pos=text_token_len+input_ids.shape[1],                  
+                ts_len=ts_token_len                     
             )
         ])
 

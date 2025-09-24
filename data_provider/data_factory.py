@@ -76,9 +76,7 @@ def data_provider(args, flag, data=None):
     return data_set, data_loader
 
 def multi_dataset_provider(args, flag):
-    """
-    同时加载 ETTh1, ETTh2, ETTm1, ETTm2 数据集，使用 WeightedRandomSampler 保证各数据集样本均衡采样。
-    """
+   
     dataset_names = ['ETTh1', 'ETTh2', 'ETTm1', 'ETTm2']
     timeenc = 0 if args.embed != 'timeF' else 1
 
@@ -89,7 +87,7 @@ def multi_dataset_provider(args, flag):
         DatasetClass = Dataset_ETT_hour if 'ETTh' in name else Dataset_ETT_minute
         dataset = DatasetClass(
             root_path=args.root_path,
-            data_path=f"{name}.csv",  # 每个数据集独立文件名
+            data_path=f"{name}.csv", 
             flag=flag,
             size=[args.seq_len, args.label_len, args.pred_len],
             features=args.features,
@@ -105,7 +103,6 @@ def multi_dataset_provider(args, flag):
 
     concat_dataset = ConcatDataset(dataset_list)
 
-    # 每个样本的采样权重 ∝ 1 / 所属数据集长度（小数据集样本权重大）
     weights = []
     for i, ds in enumerate(dataset_list):
         weight = 1.0 / len(ds)

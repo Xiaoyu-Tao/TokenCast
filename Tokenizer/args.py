@@ -73,7 +73,7 @@ parser.add_argument('--entropy_temp', type=float, default=0.5, help='Temperature
 
 args = parser.parse_args()
 
-# Train_data,Test_data = load_ETT(Path="/data/tinyy/vqvae1/dataset/ETT-small",folder=args.data)
+
 
 args.dataset = args.data_path.split('.')[0]
 

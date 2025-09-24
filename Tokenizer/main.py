@@ -35,19 +35,13 @@ def get_data(flag):
 def main():
     seed_everything(seed=2024)
 
-    # train_dataset = Dataset(device=args.device, mode='train', args=args)
-    # train_loader = Data.DataLoader(train_dataset, batch_size=args.train_batch_size, shuffle=True)
-    # test_dataset = Dataset(device=args.device, mode='test', args=args)
-    # test_loader = Data.DataLoader(train_dataset, batch_size=args.train_batch_size, shuffle=True)
+
     train_data, train_loader = get_data(flag='train')
     vali_data, vali_loader = get_data(flag='val')
     test_data, test_loader = get_data(flag='test')
 
     print('dataset initial ends')
-    # model = VQVAE(data_shape=(args.token_len, args.enc_in), hidden_dim=args.d_model, n_embed=args.n_embed,
-    #                 wave_length=args.wave_length, block_num=args.block_num)
-    
-    # model = W_VQVAE(args)
+
     
     if args.vq_model == 'SimVQ':
         model = W_SimVQ(args)

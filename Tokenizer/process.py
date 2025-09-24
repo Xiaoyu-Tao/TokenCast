@@ -246,20 +246,20 @@ class Trainer():
                 out_x, _, id_x = self.model(seqs_x,batch_y)
                 
                 test_ids.append(id_x.flatten())
-                # 拼接 ground truth
+
                 full_target = torch.cat([seqs_x, batch_y], dim=1)
-                # 对应输出长度
+
                 input_len = seqs_x.size(1)
                 total_len = full_target.size(1)
 
-                # 分别计算 MSE/MAE
+
                 mse_input = mse(out_x[:, :input_len, :], full_target[:, :input_len, :])
                 mae_input = mae(out_x[:, :input_len, :], full_target[:, :input_len, :])
 
                 mse_output = mse(out_x[:, input_len:, :], full_target[:, input_len:, :])
                 mae_output = mae(out_x[:, input_len:, :], full_target[:, input_len:, :])
 
-                # 累加
+
                 total_mse_input += mse_input.item()
                 total_mae_input += mae_input.item()
                 total_mse_output += mse_output.item()
@@ -267,7 +267,7 @@ class Trainer():
 
                 total_batches += 1
 
-        # 平均值
+
         avg_mse_input = total_mse_input / total_batches
         avg_mae_input = total_mae_input / total_batches
         avg_mse_output = total_mse_output / total_batches
@@ -276,29 +276,28 @@ class Trainer():
         print('[Input Part]  MSE: {:.6f}, MAE: {:.6f}'.format(avg_mse_input, avg_mae_input))
         print('[Output Part] MSE: {:.6f}, MAE: {:.6f}'.format(avg_mse_output, avg_mae_output))
                         
-        # plot the distribution of train and test tokens
+
 
         
         plot_path = os.path.join(self.load_path, 'token_distribution')
         
         test_ids = torch.cat(test_ids).cpu().numpy()
         
-        # print the statistics of the token distribution
-        # 
+
         
         codebook_plot_path = os.path.join(self.load_path, 'codebook_with_used_freqs.png')
-        # codebook = self.model.get_codebook_weight()
+        codebook = self.model.get_codebook_weight()
         # plot_PCA(train_ids, codebook, codebook_plot_path, max_token_num=self.args.n_embed)
 
-        # exit(0)
+        exit(0)
         train_ids = self._get_all_ids(self.train_loader)
         
         statistic_freqs(train_ids.flatten())
-        # test_ids = self._get_all_ids(self.test_loader)
+        test_ids = self._get_all_ids(self.test_loader)
         plot_token_distribution_with_stratify(train_ids, test_ids, \
             save_dir=plot_path, max_token_num=self.args.n_embed)
         
-        # count the frequence of train tokens
+
         freq = np.bincount(train_ids, minlength=self.args.n_embed)
         fixed_freq = np.where(freq > 0, freq, 1e-7)
         
@@ -306,8 +305,8 @@ class Trainer():
         
         n_classes = len(set(train_ids))
         weight = len(train_ids) / (n_classes * fixed_freq)
-        scale = 5.0  # 控制最终平均权重为多少（可调，建议 2~5）
-        # weight = weight / np.mean(weight)  # 归一化为均值为 1
+        scale = 5.0  
+
         weight = weight * scale   
         
         mask = freq > 0
@@ -334,18 +333,6 @@ class Trainer():
         print("Images have been saved.")
         
         exit(0)
-        
-        # Just calculate the minimun weight from existing tokens
-        
-        # print((freq > 0).shape)
-        
-        # real_min_weight = np.min(weight, where=(freq > 0), initial=np.inf)
-        # max_weight = real_min_weight * 20
-        # weight = np.clip(weight, a_min=None, a_max=max_weight)
-        
-        # print("#### Weight Statistics: ####")
-        # print(weight.shape, max(weight), min(weight)) # min:0.11 max: 647
-        
 
         
         print("#### Token Distribution Analysis ####")

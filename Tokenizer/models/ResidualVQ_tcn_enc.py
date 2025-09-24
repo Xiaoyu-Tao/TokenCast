@@ -169,6 +169,7 @@ class Decoder(nn.Module):
         super().__init__()
         self.decoder = CasualTRM(dim=hidden_dim, d_ff=hidden_dim*4,
                                  n_heads=n_heads, n_layers=block_num, dropout=dropout)
+
         self.linear = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim * 2),
             nn.GELU(),
@@ -187,13 +188,7 @@ class Decoder(nn.Module):
         x, _ = self.decoder(x)  
         x = self.linear(x)             # x: [B, T, D]
         x = x.view(B, T * self.patch_len, self.enc_in) # [B, pred_len, enc_in]
-        # x = x.reshape(B * T, 1, D)           # [B*T, 1, D]
-        # x = self.conv1d(x)                   # [B*T, enc_in, D]
-        # x = self.activation(x)              
        
-        # x = self.linear(x)                   # [B*T, patch_len, enc_in]
-        # x = x.transpose(1, 2)                # [B*T, D, enc_in]
-        # x = x.reshape(B, T * self.patch_len,self.enc_in)  # [B, pred_len, enc_in]
 
         return x
 
@@ -209,13 +204,8 @@ class VQVAE(nn.Module):
         total_len = self.seq_len + self.pred_len
         hidden_dim = configs.d_model
         n_embed = configs.n_embed
-        # codebook_num = configs.codebook_num
         block_num = configs.block_num
-        # kernel_size = configs.kernel_size_vqvae
-        # dropout = configs.dropout_vqvae
         self.patch_len = configs.wave_length
-        # n_heads = configs.n_heads_vqvae
-        # d_layers = configs.d_layers_vqvae
         
         self.revin = configs.revin
         affine = configs.affine
@@ -241,39 +231,25 @@ class VQVAE(nn.Module):
             x_look_back = self.revin_layer(x, 'norm')
             x_pred = self.revin_layer._normalize(y)
             x = torch.cat([x_look_back, x_pred], dim=1)
-        # x= x.permute(0,2,1)
-        # x = torch
+
+
         
-        # x = x.unfold(1, self.patch_len, self.patch_len) # [bs x  patch_num x n_vars x patch_len]
-        # x = x.permute(0, 1, 3, 2) # [bs x patch_num x patch_len x n_vars]
-        # patch_num = x.shape[1]
-        # x = x.reshape(-1, x.shape[-2], x.shape[-1]) # [bs * patch_num x patch_len x n_vars]
         n_var = x.shape[-1]
         B = x.shape[0]
         enc = self.enc(x)
         enc = enc.unsqueeze(1)
-        # print(f'endcoder_output:{enc.shape}')
         quant = self.quantize_input(enc).squeeze(-1).transpose(1, 2)
-        # print(quant.shape)
 
-        # quant = quant.reshape(-1, patch_num, quant.shape[2])
-
-        # print(f'quantize_input:{quant.shape}')
         quant, diff,ids  = self.quantize(quant)
-        # print(f'quantize_output:{quant.shape}')
-        # print(f'dec_input:{quant.shape}')
-        # print(f'ids:{ids.shape}')
 
         dec = self.dec(quant)
         if self.chan_indep:
             dec = dec.permute(0,2,1)
             dec = dec.reshape(-1, n_var, dec.shape[-1])
             dec = dec.permute(0,2,1)
-        # dec = dec.permute(0,2,1)
         if self.revin:
             dec = self.revin_layer(dec, 'denorm')
 
-        #print(f'dec_output:{dec.shape}')
 
         return dec, diff, ids
     def get_name(self):
@@ -302,7 +278,6 @@ class VQVAE(nn.Module):
         """
         if self.revin:
             look_back = self.revin_layer(look_back, 'norm')
-        # print(look_back.shape)
         enc = self.enc(look_back)
         enc = enc.unsqueeze(1)
         
@@ -313,10 +288,10 @@ class VQVAE(nn.Module):
         ids_t = ids.permute(2, 0, 1).reshape(Q, -1)  # (Q, B*N)
         quant_ids = torch.arange(Q, device=ids.device).unsqueeze(1).expand(Q, B*N)
 
+
         embeddings = self.quantize.codebooks[quant_ids, ids_t]  # (Q, B*N, D)
         embeddings = embeddings.permute(1, 0, 2).reshape(B, N, Q, -1)
         embedding = embeddings.sum(dim=-2)
-
 
         quant = torch.cat([quant, embedding], dim=1)
         dec = self.dec(quant)

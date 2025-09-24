@@ -21,9 +21,9 @@ class Dataset_Custom1(Dataset):
     def __init__(self, args, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
                  target='OT', scale=True, timeenc=0, freq='h', seasonal_patterns=None, percent=100):
-        # size [seq_len, label_len, pred_len]
+       
         self.args = args
-        # info
+        
         if size == None:
             self.seq_len = 24 * 4 * 4
             self.label_len = 24 * 4
@@ -32,7 +32,7 @@ class Dataset_Custom1(Dataset):
             self.seq_len = size[0]
             self.label_len = size[1]
             self.pred_len = size[2]
-        # init
+        
         assert flag in ['train', 'test', 'val']
         type_map = {'train': 0, 'val': 1, 'test': 2}
         self.set_type = type_map[flag]
@@ -53,12 +53,12 @@ class Dataset_Custom1(Dataset):
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path))
 
-        '''
-        df_raw.columns: ['date', ...(other features), target feature]
-        '''
+        
+        # df_raw.columns: ['date', ...(other features), target feature]
+        
         cols = list(df_raw.columns)
-        # cols.remove(self.target)
-        # cols.remove('date')
+        
+        
         if self.args.use_closedllm==0:
             text_name='Final_Search_'+str(self.args.text_len)
         else:
@@ -234,8 +234,8 @@ class Dataset_ETT_hour(Dataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
                  target='OT', scale=True, timeenc=0, freq='h', seasonal_patterns=None, percent=100):
-        # size [seq_len, label_len, pred_len]
-        # info
+       
+        
         if size == None:
             self.seq_len = 24 * 4 * 4
             self.label_len = 24 * 4
@@ -244,7 +244,7 @@ class Dataset_ETT_hour(Dataset):
             self.seq_len = size[0]
             self.label_len = size[1]
             self.pred_len = size[2]
-        # init
+        
         type_map = {'train': 0, 'val': 1, 'test': 2, 'ar_test': 2}
         self.set_type = type_map[flag]
         self.percent = percent
@@ -332,8 +332,8 @@ class Dataset_ETT_minute(Dataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTm1.csv',
                  target='OT', scale=True, timeenc=0, freq='t', seasonal_patterns=None, percent=100):
-        # size [seq_len, label_len, pred_len]
-        # info
+       
+        
         if size == None:
             self.seq_len = 24 * 4 * 4
             self.label_len = 24 * 4
@@ -439,7 +439,7 @@ class Dataset_Custom(Dataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
                  target='OT', scale=True, timeenc=0, freq='h', seasonal_patterns=None, percent=100):
-        # size [seq_len, label_len, pred_len]
+       
         if size is None:
             self.seq_len = 24 * 4 * 4
             self.label_len = 24 * 4
@@ -557,8 +557,8 @@ class Dataset_M4(Dataset):
                  features='S', data_path='ETTh1.csv',
                  target='OT', scale=False, inverse=False, timeenc=0, freq='15min',
                  seasonal_patterns='Yearly'):
-        # size [seq_len, label_len, pred_len]
-        # init
+       
+                
         self.features = features
         self.target = target
         self.scale = scale
@@ -878,8 +878,7 @@ class UEAloader(Dataset):
     def __init__(self, root_path, file_list=None, limit_size=None, flag=None):
         self.root_path = root_path
         self.all_df, self.labels_df = self.load_all(root_path, file_list=file_list, flag=flag)
-        self.all_IDs = self.all_df.index.unique()  # all sample IDs (integer indices 0 ... num_samples-1)
-
+        self.all_IDs = self.all_df.index.unique() 
         if limit_size is not None:
             if limit_size > 1:
                 limit_size = int(limit_size)
@@ -888,11 +887,11 @@ class UEAloader(Dataset):
             self.all_IDs = self.all_IDs[:limit_size]
             self.all_df = self.all_df.loc[self.all_IDs]
 
-        # use all features
+        
         self.feature_names = self.all_df.columns
         self.feature_df = self.all_df
 
-        # pre_process
+        
         normalizer = Normalizer()
         self.feature_df = normalizer.normalize(self.feature_df)
         print(len(self.all_IDs))
@@ -908,7 +907,7 @@ class UEAloader(Dataset):
             all_df: a single (possibly concatenated) dataframe with all data corresponding to specified files
             labels_df: dataframe containing label(s) for each sample
         """
-        # Select paths for training and evaluation
+
         if file_list is None:
             data_paths = glob.glob(os.path.join(root_path, '*'))  # list of all paths
         else:

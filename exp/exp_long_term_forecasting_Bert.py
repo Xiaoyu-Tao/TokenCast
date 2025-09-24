@@ -80,21 +80,7 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
     import torch
 
     def build_input_and_label(self, batch_x, batch_y, start_date, end_date, is_train=True):
-        """
-        构建符合详细格式的输入和标签，动态接收起止日期。
 
-        Args:
-            self: 类实例
-            batch_x (torch.Tensor): 输入的时间序列数据
-            batch_y (torch.Tensor): 目标的时间序列数据
-            start_date (str): 输入窗口的开始日期 (e.g., "2021-01-01")
-            end_date (str): 输入窗口的结束日期 (e.g., "2024-12-01")
-            is_train (bool): 是否为训练模式
-
-        Returns:
-            ...
-        """
-        # 元数据部分仍然是硬编码的
         series_metadata = {
             "source": "FRED-MD (Federal Reserve Economic Data - Monthly)",
             "name": "Industrial Production Index",
@@ -104,22 +90,17 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
             "semantic_meaning": "The provided tokens represent the monthly percentage growth rate of industrial production."
         }
 
-        # ... (从 VQ-VAE 获取 tokens 到 定义 tokenizer 和特殊标记的部分，与之前完全相同)
-        # 1. 从 VQ-VAE 获取离散 tokens
         tokens = self.vq_model.get_code(batch_x, batch_y)
         
-        # 自动获取 token 数量
         input_token_count = self.args.seq_len // self.args.wave_length
         output_token_count = self.args.pred_len // self.args.wave_length
         
         output_tokens = tokens[:, -output_token_count:]
         input_tokens = tokens[:, :-output_token_count]
 
-        # 添加词表偏移量
         input_tokens = input_tokens + self.model.original_len
         output_tokens = output_tokens + self.model.original_len
 
-        # 准备 tokenizer 和特殊标记
         tokenizer = self.model.text_tokenizer
         device = batch_x.device
         batch_size = input_tokens.size(0)
@@ -140,7 +121,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
             ids = tokenizer(text, return_tensors="pt", padding=False, add_special_tokens=False)["input_ids"].to(device)
             return ids.repeat(batch_size, 1) if ids.shape[0] == 1 else ids
 
-        # 2. 构建 System Prompt
         system_prompt_text = (
             "<|im_start|>system\n"
             "You are an expert econometrician and time series forecaster. Your task is to analyze the provided "
@@ -149,7 +129,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
         )
         system_ids = encode_and_repeat(system_prompt_text)
 
-        # 3. 构建 User Prompt, 现在包含动态日期
         input_mean = batch_x.mean().item()
         input_std = batch_x.std().item()
 
@@ -177,12 +156,9 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
         user_prompt_suffix_text = f"\nThe tokens capture historical trends in the {series_metadata['id']} growth rate.\n<|im_end|>\n"
         user_prompt_suffix_ids = encode_and_repeat(user_prompt_suffix_text)
 
-        # 4. 构建 Assistant Prompt 的起始部分
         assistant_start_ids = encode_and_repeat("<|im_start|>assistant\n")
 
-        # 5. 组合最终的输入和标签 (这部分逻辑不变)
         if is_train:
-            # ... (与上一版完全相同)
             input_ids = torch.cat([
                 system_ids, user_prompt_prefix_ids, input_tokens_with_markers,
                 user_prompt_suffix_ids, assistant_start_ids, output_tokens_with_markers, im_end
@@ -197,7 +173,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
             labels[:, start_of_label:end_of_label] = input_ids[:, start_of_label:end_of_label]
             return input_ids, labels
         else:
-            # ... (与上一版完全相同)
             input_ids = torch.cat([
                 system_ids, user_prompt_prefix_ids, input_tokens_with_markers,
                 user_prompt_suffix_ids, assistant_start_ids
@@ -214,7 +189,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
         total_size_bytes = 0
         device_counter = {}
 
-        # Collect parameter statistics
         for name, param in model.named_parameters():
             param_device = str(param.device)
             param_dtype = param.dtype
@@ -320,8 +294,8 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
                 ts_ids, labels = self.build_input_and_label(
                     batch_x,
                     batch_y,
-                    start_date=start_dates[0], # 使用批次中第一个样本的开始日期
-                    end_date=end_dates[0],     # 使用批次中第一个样本的结束日期
+                    start_date=start_dates[0], 
+                    end_date=end_dates[0],     
                     is_train=True
                 )
                 ts_ids = ts_ids.to(self.device)
@@ -343,7 +317,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
                 if hasattr(outputs, 'logits'):
                     logits = outputs.logits
                     preds = torch.argmax(logits, dim=-1)
-                    # === Shifted Accuracy Calculation ===
                     shifted_preds = preds[:, :-1]
                     shifted_labels = labels[:, 1:]
                     valid_mask = shifted_labels != -100
@@ -368,8 +341,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
                     all_correct.append(total_correct)
                     all_total.append(total_token)
                 
-                # if i ==2:
-                #     break
                 self.accelerator.backward(loss)
                 if (i + 1) % accumulation_steps == 0:
                     model_optim.step()
@@ -443,8 +414,8 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
                 ts_ids, labels = self.build_input_and_label(
                     batch_x,
                     batch_y,
-                    start_date=start_dates[0], # 使用批次中第一个样本的开始日期
-                    end_date=end_dates[0],     # 使用批次中第一个样本的结束日期
+                    start_date=start_dates[0], 
+                    end_date=end_dates[0],     
                     is_train=True
                 )
                 ts_ids = ts_ids.to(self.device)
@@ -464,14 +435,11 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
 
                 loss = outputs.loss.mean()
                 total_loss.append(loss.detach().cpu().item())
-                # if i==2:
-                #     break
 
                 if hasattr(outputs, 'logits'):
                     logits = outputs.logits
                     preds = torch.argmax(logits, dim=-1)
 
-                    # Shift predictions and labels
                     shifted_preds = preds[:, :-1].contiguous()
                     shifted_labels = labels[:, 1:].contiguous()
 
@@ -546,9 +514,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
 
         early_stopping = EarlyStopping(accelerator=self.accelerator, patience=self.args.patience,test_fn=test_callback)
         best_model_path = os.path.join(path, 'checkpoint.pth')
-        # if os.path.exists(best_model_path):
-        #     self.accelerator.print("Resuming from last checkpoint.")
-        #     self.model.load_state_dict(torch.load(best_model_path, map_location=self.device))
 
         self.accelerator.init_trackers(setting)
         train_loader, vali_loader, test_loader = self.accelerator.prepare(train_loader, vali_loader, test_loader)
@@ -578,8 +543,8 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
                 ts_ids, labels = self.build_input_and_label(
                     batch_x,
                     batch_y,
-                    start_date=start_dates[0], # 使用批次中第一个样本的开始日期
-                    end_date=end_dates[0],     # 使用批次中第一个样本的结束日期
+                    start_date=start_dates[0],  
+                    end_date=end_dates[0],     
                     is_train=True
                 )
                 ts_ids = ts_ids.to(self.device)
@@ -606,7 +571,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
                     logits = outputs.logits
                     preds = torch.argmax(logits, dim=-1)
 
-                    # === Shifted Accuracy Calculation ===
                     shifted_preds = preds[:, :-1]
                     shifted_labels = labels[:, 1:]
 
@@ -636,8 +600,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
                     all_correct.append(total_correct)
                     all_total.append(total_token)
                 
-                # if i ==2:
-                #     break
 
                 self.accelerator.backward(loss)
                 if (i + 1) % accumulation_steps == 0:
@@ -709,12 +671,9 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
     @torch.no_grad()
     def decode_ts(self,input_ids, output_ids, B):
         """Decode time series tokens back to values."""
-        # num_t = 2
         B_C, n_nt = output_ids.shape
-        # output_ids = torch.reshape(output_ids, (-1, num_t))
         device = input_ids.device
         input_tokens = torch.cat([input_ids, output_ids.to(device)], dim=1)
-        # Decode tokens
         input_tokens = input_tokens.to(self.vq_model.device if hasattr(self.vq_model, 'device') else self.device)
 
         decode_ts = self.vq_model.decode_ids(input_tokens).squeeze()
@@ -724,8 +683,7 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
             decode_ts = torch.reshape(decode_ts, (B_C, -1))
             decode_ts = torch.reshape(decode_ts, (B, -1, decode_ts.shape[-1]))
             decode_ts = decode_ts.permute(0, 2, 1)  
-        
-        # Apply revin if used
+
         B, L, C = decode_ts.shape
         if self.vq_model.revin == True:
             decode_ts = self.vq_model.revin_layer(decode_ts, 'denorm')
@@ -736,19 +694,19 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
         """Process output tokens to separate text and time series tokens based on special tokens."""
         batch_size = output_tokens.shape[0]
         
-        # Get special token IDs
+        
         ts_start_id = self.model.text_tokenizer.convert_tokens_to_ids('<TS_START>')
         ts_end_id = self.model.text_tokenizer.convert_tokens_to_ids('<TS_END>')
         
-        # Initialize lists to store tokens
+        
         text_tokens_list = []
         ts_tokens_list = []
         
-        # Process each sequence in the batch
+        
         for i in range(batch_size):
             seq = output_tokens[i]
             
-            # Find special token positions
+            
             ts_start_pos = torch.where(seq == ts_start_id)[0]
             ts_end_pos = torch.where(seq == ts_end_id)[0]
             
@@ -756,16 +714,16 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
                 self.accelerator.print(f"Warning: Missing special tokens in sequence {i}")
                 continue
                 
-            # Extract text tokens (before first TS_START)
+            
             text_tokens = seq[:ts_start_pos[0]]
             
-            # Extract time series tokens (between TS_START and TS_END)
+            
             ts_tokens = seq[ts_start_pos[0]+1:ts_end_pos[0]]
             
             text_tokens_list.append(text_tokens)
             ts_tokens_list.append(ts_tokens)
         
-        # Stack the tokens back into batch
+        
         ts_tokens = torch.stack(ts_tokens_list)
         
         ts_tokens = ts_tokens - self.model.original_len
@@ -791,7 +749,7 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
         test_loader = self.accelerator.prepare(test_loader)
         for i, (batch_x, batch_y, batch_x_mark, batch_y_mark, start_dates, end_dates) in enumerate(tqdm(test_loader, desc="Testing", disable=not self.accelerator.is_local_main_process, file=sys.stderr)):
             # if i < 167:
-            #     continue  # ✅ 只执行第 137 个 batch
+            #     continue  
             batch_x = batch_x.float().to(self.device)
             batch_y = batch_y.float().to(self.device)
             batch_y = batch_y[:, -self.args.pred_len:, :]
@@ -800,8 +758,8 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
             ts_ids, gt_tokens, input_tokens, text_tokens_len,ts_token_len = self.build_input_and_label(
                 batch_x,
                 batch_y,
-                start_date=start_dates[0], # 使用批次中第一个样本的开始日期
-                end_date=end_dates[0],     # 使用批次中第一个样本的结束日期
+                start_date=start_dates[0], 
+                end_date=end_dates[0],     
                 is_train=False
             )
 
@@ -833,8 +791,6 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
                 pd = np.concatenate((input_np[0, :, -1], pred[0, :, -1]), axis=0)
                 visual(gt, pd, os.path.join(folder_path, f"{i}.pdf"))
             
-            # if i == 2:
-            #     break
 
         output_tokens_list = torch.cat(output_tokens_list, dim=0)
         gt_tokens_list = torch.cat(gt_tokens_list, dim=0)
@@ -856,11 +812,9 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
             unwrapped_model = self.accelerator.unwrap_model(self.model)
 
             if os.path.exists(lora_adapter_path):
-                # ✅ LoRA adapter exists，加载 adapter
                 self.accelerator.print(f"Loading LoRA adapter from {lora_adapter_path}")
                 self.model = PeftModel.from_pretrained(unwrapped_model, lora_adapter_path)
             elif os.path.exists(state_dict_path):
-                # ✅ 加载普通 state_dict
                 self.accelerator.print(f"Loading full model state_dict from {state_dict_path}")
                 model_state = torch.load(state_dict_path, map_location=self.device)
                 unwrapped_model.load_state_dict(model_state)
@@ -869,7 +823,7 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
         self.model.eval()
         preds, trues, inputx, output_tokens, gt_tokens = self.test_func(setting=setting)
 
-        # Plot token distribution
+
         plot_token_distribution_with_stratify(
             gt_tokens, output_tokens,
             save_dir=os.path.join(save_root, setting),
@@ -903,14 +857,14 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
         self.model.to(self.device)
         self.vq_model.to(self.device)
 
-        # 取单个样本
+        
         train_data, train_loader = self._get_data(flag='train')
         single_batch = next(iter(train_loader))
         batch_x, batch_y, _, _ = single_batch
         batch_x = batch_x.float().to(self.device)
         batch_y = batch_y[:, -self.args.pred_len:, :].float().to(self.device)
 
-        # 构造输入与标签
+        
         ts_ids, labels = self.build_input_and_label(batch_x, batch_y, is_train=True)
         inputs = {
             'text_ids': None,
@@ -933,7 +887,7 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
             if (epoch + 1) % 10 == 0:
                 print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.6f}")
 
-                # Token-level Accuracy with SHIFT
+                
                 with torch.no_grad():
                     logits = outputs.logits  # (B, T, V)
                     preds = torch.argmax(logits, dim=-1)  # (B, T)
@@ -951,7 +905,7 @@ class Exp_Long_Term_Forecast_Bert_v4(Exp_Basic):
 
                     print(f"Token Acc | Text: {text_acc*100:.2f}%, TS: {ts_acc*100:.2f}%, Total: {total_acc*100:.2f}%")
 
-        # 推理评估
+            
         test_ts_ids, test_labels, out_token_shape = self.build_input_and_label(batch_x, batch_y, is_train=False)
         inputs = {
             'text_ids': None,

@@ -73,14 +73,7 @@ def get_cosine_schedule_with_warmup(optimizer, warmup_epochs, total_epochs):
 
 class EarlyStopping:
     def __init__(self, accelerator=None, patience=7, verbose=False, delta=0, save_mode=True,test_fn=None):
-        """
-        Args:
-            accelerator: HuggingFace Accelerator 实例（可选）
-            patience (int): 当验证集 loss 多久没有提升就早停
-            verbose (bool): 是否打印日志
-            delta (float): 最小改进值，避免浮动误判
-            save_mode (bool): 是否保存最优模型
-        """
+
         self.accelerator = accelerator
         self.patience = patience
         self.verbose = verbose
@@ -90,7 +83,7 @@ class EarlyStopping:
         self.val_loss_min = np.inf
         self.delta = delta
         self.save_mode = save_mode
-        self.test_fn = test_fn  # ✅ 显式初始化
+        self.test_fn = test_fn 
 
     def __call__(self, val_loss, model, path):
         """
@@ -103,7 +96,7 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model, path)
 
         elif score < self.best_score + self.delta:
-            self.counter += 1  # ✅ 修复漏加
+            self.counter += 1  
             if self.accelerator:
                 self.accelerator.print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             else:
@@ -129,15 +122,14 @@ class EarlyStopping:
             else:
                 print(msg)
 
-        # ✅ 拼接保存路径（加后缀）
         save_path = os.path.join(path, 'checkpoint.pth')
 
-        # ✅ unwrap model（如果是多卡包裹的模型）
+
         model_to_save = self.accelerator.unwrap_model(model) if self.accelerator else model
 
-        # ✅ 判断是否是 PEFT 模型（LoRA）
+
         if is_peft_model(model_to_save):
-            # 保存的是 LoRA adapter 权重（非全模型）
+
             save_path = os.path.join(path, "lora_adapter")
             model_to_save.save_pretrained(save_path)
             if self.accelerator:
@@ -145,7 +137,7 @@ class EarlyStopping:
             else:
                 print(f"[LoRA] Adapter saved to: {save_path}")
         else:
-            # 保存的是普通全模型
+            
             save_path = os.path.join(path, "checkpoint.pth")
             torch.save(model_to_save.state_dict(), save_path)
             if self.accelerator:
@@ -154,7 +146,7 @@ class EarlyStopping:
                 print(f"[Full] Model state_dict saved to: {save_path}")
 
         self.val_loss_min = val_loss
-        # ✅ 测试 callback
+        
         if self.test_fn is not None:
             try:
                 self.accelerator.print("[🚀] Testing saved model after val improvement...") if self.accelerator else print("[🚀] Testing...")
@@ -162,10 +154,10 @@ class EarlyStopping:
             except Exception as e:
                 if self.accelerator:
                     self.accelerator.print(f"[❌] Test failed after saving best model: {e}")
-                    self.accelerator.print(traceback.format_exc())  # ⬅ 打印堆栈
+                    self.accelerator.print(traceback.format_exc())  
                 else:
                     print(f"[❌] Test failed after saving best model: {e}")
-                    print(traceback.format_exc())  # ⬅ 打印堆栈
+                    print(traceback.format_exc())  
 
 
 class dotdict(dict):
@@ -236,7 +228,7 @@ def plot_token_distribution_with_stratify(gt_tokens: torch.Tensor, pred_tokens: 
     _gt_tokens = gt_tokens.flatten().detach().cpu().numpy()
     _pred_tokens = pred_tokens.flatten().detach().cpu().numpy()
     
-    # 使用 np.unique 获取数组中每个元素的出现次数
+    
     gt_uni_elements, gt_cnts_elements = np.unique(_gt_tokens, return_counts=True)
     pred_uni_elements, pred_cnts_elements = np.unique(_pred_tokens, return_counts=True)
     
@@ -246,7 +238,7 @@ def plot_token_distribution_with_stratify(gt_tokens: torch.Tensor, pred_tokens: 
 
     plt.clf()
 
-    # 绘制 Groundtruth 的 Token 分布
+    
     plt.bar(gt_uni_elements, gt_cnts_elements, label='GroundTruth')
     plt.xlabel('Token ID')
     plt.ylabel('Token Count')
@@ -256,7 +248,7 @@ def plot_token_distribution_with_stratify(gt_tokens: torch.Tensor, pred_tokens: 
     
     plt.clf()
     
-    # 绘制 Prediction 的 Token 分布
+    
     plt.bar(pred_uni_elements, pred_cnts_elements, label='Prediction')
     plt.xlabel('Token ID')
     plt.ylabel('Token Count')
@@ -266,7 +258,7 @@ def plot_token_distribution_with_stratify(gt_tokens: torch.Tensor, pred_tokens: 
     
     plt.clf()
     
-    # 绘制 Groundtruth 和 Prediction 的 Token 分布
+    
     gt_cnts = np.zeros((max_token_num, ))
     gt_cnts[gt_uni_elements] = gt_cnts_elements
     
@@ -283,12 +275,12 @@ def plot_token_distribution_with_stratify(gt_tokens: torch.Tensor, pred_tokens: 
     colors_low = ['blue' if d1 < d2 else 'orange' for d1, d2 in zip(data1, data2)]
     colors_high = ['orange' if d1 < d2 else 'blue' for d1, d2 in zip(data1, data2)]
 
-    # 设置横坐标
+    
     x = np.arange(len(data1))
 
     # print(x, data_low, data_high)
 
-    # 绘制柱状图
+            
     data_high = (np.array(data_high) - np.array(data_low)).tolist()
     plt.bar(x, data_low, color=colors_low, label='Prediction')
     plt.bar(x, data_high, bottom=data_low, color=colors_high, label='GroundTruth') 
